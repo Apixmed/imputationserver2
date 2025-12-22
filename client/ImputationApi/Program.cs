@@ -19,9 +19,7 @@ namespace ImputationApi
             WebApplication app = builder.Build();
 
             app.UseHttpsRedirection();
-
             app.UseAuthorization();
-
             app.MapControllers();
 
             app.Run();
