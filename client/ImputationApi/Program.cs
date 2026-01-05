@@ -14,6 +14,7 @@ namespace ImputationApi
 
             builder.Services.AddControllers();
             builder.Services.AddSingleton<IBlobStorageService, BlobStorageService>();
+            builder.Services.AddSingleton<IReferencePanelCacheService, ReferencePanelCacheService>();
             builder.Services.AddSingleton<IImputationService, ImputationService>();
 
             WebApplication app = builder.Build();

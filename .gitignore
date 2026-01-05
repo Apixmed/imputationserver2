@@ -7,3 +7,5 @@ work
 .nf-test
 cloudgene.report.json
 .nf-test.log
+/reference_panel_cache
+/downloaded_ref_panel
