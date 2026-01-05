@@ -14,7 +14,18 @@ namespace ImputationApi
 
             builder.Services.AddControllers();
             builder.Services.AddSingleton<IBlobStorageService, BlobStorageService>();
-            builder.Services.AddSingleton<IImputationService, ImputationService>();
+            builder.Services.AddSingleton<IRepositoryPathResolver, RepositoryPathResolver>();
+            builder.Services.AddSingleton<IReferencePanelCacheService, ReferencePanelCacheService>();
+            builder.Services.AddSingleton<ImputationService>();
+            builder.Services.AddSingleton<IImputationService>(serviceProvider =>
+            {
+                ILogger<ImputationServiceCacheDecorator> logger = serviceProvider.GetRequiredService<ILogger<ImputationServiceCacheDecorator>>();
+                ImputationService inner = serviceProvider.GetRequiredService<ImputationService>();
+                IRepositoryPathResolver repositoryPathResolver = serviceProvider.GetRequiredService<IRepositoryPathResolver>();
+                IReferencePanelCacheService cache = serviceProvider.GetRequiredService<IReferencePanelCacheService>();
+
+                return new ImputationServiceCacheDecorator(logger, inner, repositoryPathResolver, cache);
+            });
 
             WebApplication app = builder.Build();
 

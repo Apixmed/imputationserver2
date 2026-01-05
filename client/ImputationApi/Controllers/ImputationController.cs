@@ -9,14 +9,13 @@ namespace ImputationApi.Controllers
 {
     [ApiController]
     [Route("imputations")]
-    public class ImputationController(ILogger<ImputationController> logger, IConfiguration configuration, IImputationService imputationService) : ControllerBase
+    public class ImputationController(IConfiguration configuration, IImputationService imputationService) : ControllerBase
     {
         private const string DefaultDistro = "Ubuntu";
         private const string OutputDirectoryName = "output";
 
         private static readonly ConcurrentDictionary<Guid, ImputationJob> Jobs = new();
 
-        private readonly ILogger<ImputationController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         private readonly IConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         private readonly IImputationService _imputationService = imputationService ?? throw new ArgumentNullException(nameof(imputationService));
 
@@ -35,18 +34,6 @@ namespace ImputationApi.Controllers
                 return BadRequest(configError);
             }
 
-            string repoWindowsPath;
-            try
-            {
-                repoWindowsPath = _imputationService.ResolveRepositoryWindowsPath();
-            }
-            catch (InvalidOperationException ex)
-            {
-                _logger.LogError(ex, "Failed to resolve repository path for imputation job {JobId}", id);
-
-                return StatusCode(500, "Failed to resolve repository path: " + ex.Message);
-            }
-
             string distro = _configuration["Imputation:Distro"] ?? DefaultDistro;
 
             ImputationJob job = new()
@@ -54,7 +41,7 @@ namespace ImputationApi.Controllers
                 Id = id,
                 Status = ImputationStatus.Pending,
                 CreatedAt = DateTimeOffset.UtcNow,
-                RepoWindowsPath = repoWindowsPath.NormalizeWindowsPath(),
+                RepoWindowsPath = null,
                 ConfigName = configName,
                 ConfigRelativePath = configRelativePath,
                 InputFilesPath = string.Empty,
@@ -62,16 +49,6 @@ namespace ImputationApi.Controllers
                 ReferencePanelDownloadUrl = request.ReferencePanelDownloadUrl,
                 Distro = string.IsNullOrWhiteSpace(distro) ? DefaultDistro : distro,
             };
-
-            if (!Directory.Exists(job.RepoWindowsPath))
-            {
-                job.Status = ImputationStatus.Failed;
-                job.ErrorMessage = "Repository path not found: " + job.RepoWindowsPath;
-                job.FinishedAt = DateTimeOffset.UtcNow;
-                Jobs[id] = job;
-
-                return BadRequest(job);
-            }
 
             Jobs[id] = job;
 

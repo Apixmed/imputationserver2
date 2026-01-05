@@ -5,26 +5,15 @@ using System.ComponentModel;
 
 namespace ImputationApi.Services
 {
-    public sealed class ImputationService(ILogger<ImputationService> logger, IConfiguration configuration, IWebHostEnvironment environment, IBlobStorageService blobStorageService) : IImputationService
+    public sealed class ImputationService(ILogger<ImputationService> logger, IConfiguration configuration, IRepositoryPathResolver repositoryPathResolver, IBlobStorageService blobStorageService) : IImputationService
     {
         private const string DefaultDistro = "Ubuntu";
         private const string OutputDirectoryName = "output";
 
         private readonly ILogger<ImputationService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         private readonly IConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        private readonly IWebHostEnvironment _environment = environment ?? throw new ArgumentNullException(nameof(environment));
+        private readonly IRepositoryPathResolver _repositoryPathResolver = repositoryPathResolver ?? throw new ArgumentNullException(nameof(repositoryPathResolver));
         private readonly IBlobStorageService _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
-
-        public string ResolveRepositoryWindowsPath()
-        {
-            string contentRootPath = _environment.ContentRootPath;
-            DirectoryInfo? clientDirectory = Directory.GetParent(contentRootPath) ?? throw new InvalidOperationException("Unable to resolve client directory from content root path: " + contentRootPath);
-            DirectoryInfo? repositoryRootDirectory = clientDirectory.Parent;
-
-            return repositoryRootDirectory == null
-                ? throw new InvalidOperationException("Unable to resolve repository root directory from client directory: " + clientDirectory.FullName)
-                : repositoryRootDirectory.FullName;
-        }
 
         public async Task RunAsync(ImputationJob job, CancellationToken cancellationToken)
         {
@@ -37,7 +26,19 @@ namespace ImputationApi.Services
             {
                 job.Status = ImputationStatus.Running;
 
+                if (string.IsNullOrWhiteSpace(job.RepoWindowsPath))
+                {
+                    job.RepoWindowsPath = _repositoryPathResolver.ResolveRepositoryWindowsPath().NormalizeWindowsPath();
+                }
+
                 string repositoryPath = job.EnsureRepositoryPath();
+                if (!Directory.Exists(repositoryPath))
+                {
+                    job.Status = ImputationStatus.Failed;
+                    job.ErrorMessage = "Repository path not found: " + repositoryPath;
+
+                    return;
+                }
 
                 if (job.DownloadUrls is { Count: > 0 })
                 {
@@ -48,7 +49,7 @@ namespace ImputationApi.Services
                     }
                 }
 
-                if (job.ReferencePanelDownloadUrl != null)
+                if (job.ReferencePanelDownloadUrl != null && string.IsNullOrWhiteSpace(job.ReferencePanelLocalPath))
                 {
                     referencePanelDirectory = await DownloadReferencePanelAsync(job, repositoryPath, cancellationToken);
                     if (referencePanelDirectory == null)
@@ -139,24 +140,25 @@ namespace ImputationApi.Services
             string referencePanelDirectory = Path.Combine(repositoryPath, "downloaded_ref_panel", shortId);
             _ = Directory.CreateDirectory(referencePanelDirectory);
 
+            string fileName = Path.GetFileName(referencePanelUrl.LocalPath);
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                fileName = "reference_panel";
+            }
+
+            string targetPath = Path.Combine(referencePanelDirectory, fileName);
+
             try
             {
                 using HttpClient httpClient = new();
 
-                string fileName = Path.GetFileName(referencePanelUrl.LocalPath);
-
-                if (string.IsNullOrWhiteSpace(fileName))
-                {
-                    fileName = "reference_panel_" + shortId;
-                }
-
-                string targetPath = Path.Combine(referencePanelDirectory, fileName);
-
                 using HttpResponseMessage response = await httpClient.GetAsync(referencePanelUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 _ = response.EnsureSuccessStatusCode();
 
-                await using FileStream fileStream = File.Create(targetPath);
-                await response.Content.CopyToAsync(fileStream, cancellationToken);
+                await using (FileStream fileStream = File.Create(targetPath))
+                {
+                    await response.Content.CopyToAsync(fileStream, cancellationToken);
+                }
 
                 job.ReferencePanelLocalPath = targetPath;
 
