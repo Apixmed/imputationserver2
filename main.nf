@@ -13,7 +13,7 @@ if (params.refpanel_yaml){
 }
 
 requiredParams = [
-    'project', 'files', 'output', 'refpanel'
+    'project', 'output', 'refpanel'
 ]
 
 for (param in requiredParams) {
@@ -41,15 +41,6 @@ if (params.password == null) {
 //set default population to "off" when allele_frequency_population is null
 params.population = params.allele_frequency_population ?: "off"
 
-Channel
-    .fromPath(params.files)
-    .set {files}
-
-files.ifEmpty {
-    println "::error:: No vcf.gz input files detected."
-    exit 1
-}
-
 // Find site files from full pattern and make site file pattern relative
 params.refpanel.sites_pattern = "${params.refpanel.sites}"
 params.refpanel.sites = "./${file(params.refpanel.sites).fileName}"
@@ -71,6 +62,7 @@ site_files_ch = Channel.of(1..22, 'X', 'MT')
             return tuple(sites_file, sites_file_index); 
     }
 
+include { VCF_PREP } from './workflows/vcf_preparation'
 include { INPUT_VALIDATION } from './workflows/input_validation'
 include { QUALITY_CONTROL } from './workflows/quality_control'
 include { PHASING } from './workflows/phasing'
@@ -84,8 +76,10 @@ workflow {
     println "Welcome to ${params.service.name} (${workflow.manifest.version})"
 
     if (params.imputation.enabled){
+        
+        VCF_PREP()
 
-        INPUT_VALIDATION()
+        INPUT_VALIDATION(VCF_PREP.out.prepped_vcfs)
 
         QUALITY_CONTROL(
             INPUT_VALIDATION.out.validated_files,
@@ -147,21 +141,14 @@ workflow.onComplete {
     //TODO: use templates
     //TODO: move in EmailHelper class
         if (!workflow.success) {
-            def statusMessage = (workflow.exitStatus != null || workflow.errorReport == "QC step failed") 
-            ? "failed" 
-            : "canceled"
-
-            def statusText = (statusMessage == "failed") 
-            ? "Your job failed." 
-            : "Your job has been canceled."
-                
-            if (params.send_mail && params.user.email != null) {
-                sendMail{
-                    to "${params.user.email}"
-                    subject "[${params.service.name}] Job ${params.project} ${statusMessage}" 
-                    body "Dear ${params.user.name}, \n ${statusText}.\n\n More details can be found at the following link: ${params.service.url}/index.html#!jobs/${params.project_id}"
-                }
+        def statusMessage = workflow.exitStatus != null  || workflow.errorReport == "QC step failed" ? "failed" : "canceled"
+        if (params.send_mail && params.user.email != null){
+            sendMail{
+                to "${params.user.email}"
+                subject "[${params.service.name}] Job ${params.project} ${statusMessage}" 
+                body "Dear ${params.user.name}, \n Your job ${statusMessage}.\n\n More details can be found at the following link: ${params.service.url}/index.html#!jobs/${params.project}"
             }
+        }
         println "::error:: Imputation job ${statusMessage}." 
         return
     }
@@ -185,7 +172,7 @@ workflow.onComplete {
             sendMail{
                 to "${params.user.email}"
                 subject "[${params.service.name}] Job ${params.project} is complete"
-                body "Dear ${params.user.name}, \n Your imputation job has finished succesfully. The password for the imputation results is: ${params.encryption_password}\n\n You can download the results from the following link: ${params.service.url}/index.html#!jobs/${params.project_id}"
+                body "Dear ${params.user.name}, \n Your imputation job has finished succesfully. The password for the imputation results is: ${params.encryption_password}\n\n You can download the results from the following link: ${params.service.url}/index.html#!jobs/${params.project}"
             }
             println "::message:: Data have been exported successfully. We have sent a notification email to <b>${params.user.email}</b>"
         } else {
@@ -199,7 +186,7 @@ workflow.onComplete {
         sendMail{
             to "${params.user.email}"
             subject "[${params.service.name}] Job ${params.project} is complete"
-            body "Dear ${params.user.name}, \n Your PGS job has finished successfully. \n\n You can download the results from the following link: ${params.service.url}/index.html#!jobs/${params.project_id}"
+            body "Dear ${params.user.name}, \n Your PGS job has finished successfully. \n\n You can download the results from the following link: ${params.service.url}/index.html#!jobs/${params.project}"
         }
         println "::message:: Data have been exported successfully. We have sent a notification email to <b>${params.user.email}</b>"
     } else {
