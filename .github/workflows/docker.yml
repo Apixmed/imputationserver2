@@ -1,0 +1,25 @@
+name: Build & Push to ACR
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to ACR
+        run: az acr login --name apixmedgenomics
+
+      - name: Build and push
+        run: |
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/imputationserver2:latest .
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/imputationserver2:latest
