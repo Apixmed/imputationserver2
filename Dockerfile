@@ -77,3 +77,19 @@ RUN ln -s /lib/x86_64-linux-gnu/libgsl.so.27 /opt/conda/lib/libgsl.so.25
 
 COPY files/bin/trace /usr/bin/.
 COPY files/bin/vcf2geno /usr/bin/.
+
+# Install azcopy for uploading results to Azure Blob Storage
+RUN wget -q https://aka.ms/downloadazcopy-v10-linux -O /tmp/azcopy.tar.gz && \
+    tar xf /tmp/azcopy.tar.gz -C /tmp && \
+    mv /tmp/azcopy_linux_amd64_*/azcopy /usr/local/bin/ && \
+    chmod +x /usr/local/bin/azcopy && \
+    rm -rf /tmp/azcopy*
+
+# Copy pipeline source
+WORKDIR /app
+COPY . /app
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
