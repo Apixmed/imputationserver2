@@ -1,5 +1,7 @@
 #!/bin/bash
-set -euo pipefail
+set -euxo pipefail
+
+trap 'echo "[entrypoint] ERROR at line $LINENO: command exited with code $?"' ERR
 
 echo "[entrypoint] Starting imputation job: $JOB_ID"
 
