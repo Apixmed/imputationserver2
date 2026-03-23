@@ -78,6 +78,11 @@ RUN ln -s /lib/x86_64-linux-gnu/libgsl.so.27 /opt/conda/lib/libgsl.so.25
 COPY files/bin/trace /usr/bin/.
 COPY files/bin/vcf2geno /usr/bin/.
 
+# Install Nextflow
+RUN wget -q https://github.com/nextflow-io/nextflow/releases/download/v24.10.5/nextflow && \
+    chmod +x nextflow && \
+    mv nextflow /usr/local/bin/nextflow
+
 # Install azcopy for uploading results to Azure Blob Storage
 RUN wget -q https://aka.ms/downloadazcopy-v10-linux -O /tmp/azcopy.tar.gz && \
     tar xf /tmp/azcopy.tar.gz -C /tmp && \

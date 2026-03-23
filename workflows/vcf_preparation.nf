@@ -1,9 +1,4 @@
 
-//params.input_vcfs = "/home/lbombini/test_batch/*.snv.vcf"
-//params.rename_chr_map = '/home/lbombini/refpanel/helper_files/rename-chrs.txt' // TODO: create a process generating the helper files
-//params.ploidy_file    = '/home/lbombini/refpanel/helper_files/ploidy-file.txt'
-params.prepped_vcfs = "${file(params.input_vcfs).first().parent}/imputation_prepped"
-
 include { COMPRESS } from '../modules/local/vcf_prep/vcf_prep'
 include { INDEX } from '../modules/local/vcf_prep/vcf_prep'
 include { MERGE } from '../modules/local/vcf_prep/vcf_prep'
@@ -13,8 +8,9 @@ include { FIX_CHR_X } from '../modules/local/vcf_prep/vcf_prep'
 workflow VCF_PREP {
 
     main:
-    
-    input_ch = Channel.fromPath(params.input_vcfs)
+
+    params.prepped_vcfs = "${file(params.files).first().parent}/imputation_prepped"
+    input_ch = Channel.fromPath(params.files)
     // Split input VCFs into gzipped and not gzipped
     input_ch.branch {
         to_compress: !it.name.endsWith('.gz')
