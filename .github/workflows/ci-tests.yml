@@ -24,11 +24,11 @@ jobs:
       - name: Setup Nextflow
         uses: nf-core/setup-nextflow@v1
         with:
-          version: "latest-edge"
+          version: "24.10.2"
 
       - name: Install nf-test
         run: |
-          wget -qO- get.nf-test.com | bash
+          wget -qO- https://get.nf-test.com | NF_TEST_VERSION=0.9.1 bash
           sudo mv nf-test /usr/local/bin/
           
       - name: Build Docker 
