@@ -18,7 +18,7 @@ echo "[entrypoint] Downloaded ${#URLS[@]} file(s) to /input"
 
 # ── 2. Download reference panel from Blob SAS URL ────────────────────────────
 echo "[entrypoint] Downloading reference panel"
-mkdir -p /refpanel
+mkdir -p /refpanels
 azcopy copy "$REF_PANEL_SAS_URL" /refpanels/ --recursive
 echo "[entrypoint] Reference panel downloaded to /refpanels"
 
