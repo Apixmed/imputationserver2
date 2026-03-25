@@ -22,7 +22,7 @@ echo "[entrypoint] Downloaded ${#URLS[@]} file(s) to /input"
 echo "[entrypoint] Downloading reference panel archive"
 mkdir -p /refpanels
 refpanel_filename=$(basename "${REF_PANEL_SAS_URL%%\?*}")
-wget -q -O "/tmp/$refpanel_filename" "$REF_PANEL_SAS_URL"
+wget -O "/tmp/$refpanel_filename" "$REF_PANEL_SAS_URL"
 echo "[entrypoint] Extracting reference panel archive"
 7z x "/tmp/$refpanel_filename" -o/refpanels -y
 rm "/tmp/$refpanel_filename"
