@@ -18,11 +18,15 @@ done
 
 echo "[entrypoint] Downloaded ${#URLS[@]} file(s) to /input"
 
-# ── 2. Download reference panel from Blob SAS URL ────────────────────────────
-echo "[entrypoint] Downloading reference panel"
+# ── 2. Download and extract reference panel .7z archive ──────────────────────
+echo "[entrypoint] Downloading reference panel archive"
 mkdir -p /refpanels
-azcopy copy "$REF_PANEL_SAS_URL" /refpanels/ --recursive
-echo "[entrypoint] Reference panel downloaded to /refpanels"
+refpanel_filename=$(basename "${REF_PANEL_SAS_URL%%\?*}")
+wget -q -O "/tmp/$refpanel_filename" "$REF_PANEL_SAS_URL"
+echo "[entrypoint] Extracting reference panel archive"
+7z x "/tmp/$refpanel_filename" -o/refpanels -y
+rm "/tmp/$refpanel_filename"
+echo "[entrypoint] Reference panel extracted to /refpanels"
 
 # ── 3. Run Nextflow pipeline ──────────────────────────────────────────────────
 # All tools (eagle, minimac4, bcftools, etc.) are installed locally in this

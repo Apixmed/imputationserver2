@@ -3,7 +3,7 @@ LABEL creator="Lukas Forer <lukas.forer@i-med.ac.at> / Sebastian Schönherr <seb
 
 # Install compilers
 RUN apt-get update && \
-    apt-get install -y wget build-essential zlib1g-dev liblzma-dev libbz2-dev libxau-dev libgsl-dev && \
+    apt-get install -y wget build-essential zlib1g-dev liblzma-dev libbz2-dev libxau-dev libgsl-dev p7zip-full && \
     apt-get -y clean
 
 #  Install miniconda
