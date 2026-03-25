@@ -22,11 +22,12 @@ echo "[entrypoint] Downloaded ${#URLS[@]} file(s) to /input"
 echo "[entrypoint] Downloading reference panel archive"
 mkdir -p /refpanels
 refpanel_filename=$(basename "${REF_PANEL_SAS_URL%%\?*}")
-wget -O "/tmp/$refpanel_filename" "$REF_PANEL_SAS_URL"
+wget --no-verbose -O "/tmp/$refpanel_filename" "$REF_PANEL_SAS_URL"
 echo "[entrypoint] Extracting reference panel archive"
 7z x "/tmp/$refpanel_filename" -o/refpanels -y
 rm "/tmp/$refpanel_filename"
-echo "[entrypoint] Reference panel extracted to /refpanels"
+refpanel_yaml=$(find /refpanels -name "refpanel.yaml" -type f | head -1)
+echo "[entrypoint] Reference panel extracted, refpanel.yaml: $refpanel_yaml"
 
 # ── 3. Run Nextflow pipeline ──────────────────────────────────────────────────
 # All tools (eagle, minimac4, bcftools, etc.) are installed locally in this
@@ -42,7 +43,7 @@ ls -la /output/ 2>/dev/null || echo "(none)"
 nextflow run /app/main.nf \
     --project "$JOB_ID" \
     --files "/input/*.vcf.gz" \
-    --refpanel_yaml "/refpanels/refpanel.yaml" \
+    --refpanel_yaml "$refpanel_yaml" \
     --output /output \
     -c "/app/$CONFIG_PATH" \
     -c /tmp/override.config
