@@ -8,6 +8,7 @@ on:
 jobs:
   publish:
 
+    name: "Docs — Deploy to GitHub Pages"
     runs-on: ubuntu-latest
 
     steps:

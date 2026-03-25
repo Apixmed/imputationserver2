@@ -4,8 +4,9 @@ on: [push, pull_request]
 
 jobs:
 
-  build:
+  test:
 
+    name: "Test (shard ${{ matrix.shard }}/${{ strategy.job-total }})"
     runs-on: ubuntu-latest
     strategy:
       matrix:
