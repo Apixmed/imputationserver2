@@ -28,13 +28,13 @@ workflow VCF_PREP {
     INDEX(all_vcf_gz_ch)
 
     // Merge all the compressed files and produce multisample VCF
-    MERGE(all_vcf_gz_ch.collect(), INDEX.out.index.collect(), file(params.rename_chr_map))
+    MERGE(all_vcf_gz_ch.collect(), INDEX.out.index.collect(), params.rename_chr_map ? file(params.rename_chr_map) : [])
 
     // Split multisample VCF by chromosome
     SPLIT_CHR(Channel.from(1..22), MERGE.out)
 
     // Fix ploidy in chrX.vcf
-    FIX_CHR_X(MERGE.out, file(params.ploidy_file))
+    FIX_CHR_X(MERGE.out, params.ploidy_file ? file(params.ploidy_file) : [])
     prepped_vcfs = SPLIT_CHR.out.concat(FIX_CHR_X.out)
     
     emit:
