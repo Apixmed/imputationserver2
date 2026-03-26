@@ -25,3 +25,14 @@ jobs:
           context: .
           push: true
           tags: apixmedgenomics.azurecr.io/imputationserver2:latest
+
+      - name: Notify Telegram
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          ICON=$([[ "$STATUS" == "success" ]] && echo "✅" || echo "❌")
+          TEXT="${ICON} *imputationserver2* — *${STATUS}*%0ABranch: \`${{ github.ref_name }}\`%0ACommit: \`${{ github.sha }}\`%0AMessage: ${{ github.event.head_commit.message }}%0AAuthor: ${{ github.actor }}%0A[View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d parse_mode="Markdown" \
+            -d text="$TEXT"
