@@ -19,6 +19,7 @@ done
 echo "[entrypoint] Downloaded ${#URLS[@]} file(s) to /input"
 
 # ── 2. Download and extract reference panel .7z archive ──────────────────────
+apt-get install -y -q p7zip-full
 echo "[entrypoint] Downloading reference panel archive"
 mkdir -p /refpanels
 refpanel_filename=$(basename "${REF_PANEL_SAS_URL%%\?*}")
