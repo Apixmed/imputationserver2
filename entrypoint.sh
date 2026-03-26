@@ -42,6 +42,7 @@ echo "[entrypoint] Output files before pipeline:"
 ls -la /output/ 2>/dev/null || echo "(none)"
 
 echo "[entrypoint] Running Nextflow pipeline"
+set +e
 nextflow run /app/main.nf \
     --project "$JOB_ID" \
     --files "/input/*.vcf.gz" \
@@ -50,6 +51,7 @@ nextflow run /app/main.nf \
     -c "/app/$CONFIG_PATH" \
     -c /tmp/override.config
 nextflow_exit=$?
+set -e
 echo "[entrypoint] Nextflow exited with code: $nextflow_exit"
 
 echo "[entrypoint] Output files after pipeline:"
@@ -57,7 +59,9 @@ ls -la /output/ 2>/dev/null || echo "(none)"
 
 if [ $nextflow_exit -ne 0 ]; then
     echo "[entrypoint] Nextflow failed — uploading .nextflow.log to blob storage"
-    azcopy copy ".nextflow.log" "$OUTPUT_SAS_URL/.nextflow.log" --log-level INFO 2>/dev/null || \
+    output_base="${OUTPUT_SAS_URL%%\?*}"
+    output_sas="${OUTPUT_SAS_URL#*\?}"
+    azcopy copy ".nextflow.log" "${output_base}/.nextflow.log?${output_sas}" --log-level INFO || \
         echo "[entrypoint] Failed to upload .nextflow.log"
     exit $nextflow_exit
 fi
