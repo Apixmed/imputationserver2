@@ -31,19 +31,19 @@ process INDEX {
 
 process MERGE {
 
-    input:
+    input: 
         path vcfs
         path indexes
-        path rename_chr_map, optional: true
+        path rename_chr_map
 
     output:
         tuple path("multisample.vcf.gz"), path("multisample.vcf.gz.csi")
 
     script:
-    def rename = rename_chr_map ? "| bcftools annotate --rename-chr ${rename_chr_map}" : ""
     """
     bcftools merge -m none --force-single ${vcfs.join(' ')} | \
-        bcftools norm -m - ${rename} | \
+        bcftools norm -m - | \
+        bcftools annotate --rename-chr ${rename_chr_map} | \
         bcftools sort -W -Oz -o multisample.vcf.gz
     """
 }
@@ -72,15 +72,14 @@ process FIX_CHR_X{
 
     input:
         tuple path(vcf), path(index)
-        path ploidy_file, optional: true
+        path ploidy_file
 
     output:
         path "chrX.vcf.gz"
 
     script:
-    def ploidy = ploidy_file ? "-- -p ${ploidy_file}" : ""
     """
     bcftools view -r chrX ${vcf} |\
-        bcftools +fixploidy -Oz -o chrX.vcf.gz ${ploidy}
+        bcftools +fixploidy -Oz -o chrX.vcf.gz  --  -p ${ploidy_file}
     """
 }
