@@ -41,6 +41,7 @@ EOF
 echo "[entrypoint] Output files before pipeline:"
 ls -la /output/ 2>/dev/null || echo "(none)"
 
+echo "[entrypoint] Running Nextflow pipeline"
 nextflow run /app/main.nf \
     --project "$JOB_ID" \
     --files "/input/*.vcf.gz" \
@@ -48,21 +49,29 @@ nextflow run /app/main.nf \
     --output /output \
     -c "/app/$CONFIG_PATH" \
     -c /tmp/override.config
-
-echo "[entrypoint] Nextflow pipeline completed"
+nextflow_exit=$?
+echo "[entrypoint] Nextflow exited with code: $nextflow_exit"
 
 echo "[entrypoint] Output files after pipeline:"
 ls -la /output/ 2>/dev/null || echo "(none)"
 
+if [ $nextflow_exit -ne 0 ]; then
+    echo "[entrypoint] Nextflow failed — uploading .nextflow.log to blob storage"
+    azcopy copy ".nextflow.log" "$OUTPUT_SAS_URL/.nextflow.log" --log-level INFO 2>/dev/null || \
+        echo "[entrypoint] Failed to upload .nextflow.log"
+    exit $nextflow_exit
+fi
+
 # ── 4. Upload results to Azure Blob via SAS URL ───────────────────────────────
 echo "[entrypoint] Uploading results to blob storage"
-azcopy copy "/output/*" "$OUTPUT_SAS_URL" --recursive
+azcopy copy "/output/*" "$OUTPUT_SAS_URL" --recursive --log-level INFO
+echo "[entrypoint] azcopy exited with code: $?"
 
 echo "[entrypoint] Upload complete"
 
 # ── 5. Notify that the job is done ───────────────────────────────────────
 echo "[entrypoint] Sending callback to $CALLBACK_URL"
-curl -s -X POST "$CALLBACK_URL" \
+curl -v -X POST "$CALLBACK_URL" \
     -H "Content-Type: application/json" \
     -d "{\"jobId\":\"$JOB_ID\",\"status\":\"success\"}"
 
