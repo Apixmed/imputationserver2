@@ -61,7 +61,7 @@ if [ $nextflow_exit -ne 0 ]; then
     echo "[entrypoint] Nextflow failed — uploading .nextflow.log to blob storage"
     output_base="${OUTPUT_SAS_URL%%\?*}"
     output_sas="${OUTPUT_SAS_URL#*\?}"
-    azcopy copy ".nextflow.log" "${output_base}/.nextflow.log?${output_sas}" --log-level INFO || \
+    azcopy copy ".nextflow.log" "${output_base}/${OUTPUT_BLOB_PREFIX}/.nextflow.log?${output_sas}" --log-level INFO || \
         echo "[entrypoint] Failed to upload .nextflow.log"
     exit $nextflow_exit
 fi
